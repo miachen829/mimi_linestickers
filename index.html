@@ -1,0 +1,2511 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>圖片分割工具 | Image Splitter</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        :root {
+            --primary: #2d3748;
+            --accent: #f56565;
+            --accent-hover: #e53e3e;
+            --bg: #f7fafc;
+            --card: #ffffff;
+            --border: #e2e8f0;
+            --text: #1a202c;
+            --text-muted: #718096;
+            --success: #48bb78;
+            --shadow: 0 10px 40px rgba(0,0,0,0.08);
+            --shadow-lg: 0 20px 60px rgba(0,0,0,0.12);
+        }
+        
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 3rem;
+            animation: fadeInDown 0.6s ease-out;
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+            letter-spacing: -0.02em;
+        }
+        
+        .subtitle {
+            color: var(--text-muted);
+            font-size: 1.1rem;
+        }
+        
+        .main-grid {
+            display: grid;
+            grid-template-columns: 450px 1fr;
+            gap: 2rem;
+            animation: fadeIn 0.8s ease-out 0.2s both;
+        }
+        
+        .grid-preview-container {
+            position: relative;
+            width: 100%;
+            max-height: 600px;
+            background: var(--bg);
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-top: 1rem;
+        }
+        
+        .grid-preview-image {
+            max-width: 100%;
+            max-height: 600px;
+            display: block;
+            object-fit: contain;
+        }
+        
+        .grid-overlay {
+            position: absolute;
+            pointer-events: none;
+        }
+        
+        .grid-line {
+            position: absolute;
+            background: var(--accent);
+            opacity: 0.7;
+            box-shadow: 0 0 4px rgba(245, 101, 101, 0.5);
+            transition: background 0.2s ease;
+            pointer-events: auto;
+        }
+        
+        .grid-line:hover {
+            background: #e53e3e;
+            opacity: 0.9;
+            z-index: 10;
+        }
+        
+        .grid-line.horizontal {
+            width: 100%;
+            height: 3px;
+            left: 0;
+            cursor: ns-resize;
+        }
+        
+        .grid-line.vertical {
+            height: 100%;
+            width: 3px;
+            top: 0;
+            cursor: ew-resize;
+        }
+        
+        .grid-line.dragging {
+            background: #dc2626;
+            opacity: 1;
+            box-shadow: 0 0 8px rgba(220, 38, 38, 0.8);
+        }
+        
+        .grid-preview-placeholder {
+            color: var(--text-muted);
+            text-align: center;
+            padding: 2rem;
+        }
+        
+        .grid-preview-placeholder-icon {
+            font-size: 3rem;
+            opacity: 0.3;
+            margin-bottom: 1rem;
+        }
+        
+        .resize-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        
+        .resize-card {
+            background: var(--bg);
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+        
+        .resize-card:hover {
+            border-color: var(--accent);
+            transform: translateY(-2px);
+        }
+        
+        .resize-card.drag-over {
+            border-color: var(--success);
+            background: rgba(72, 187, 120, 0.1);
+            transform: scale(1.02);
+        }
+        
+        .resize-title {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        
+        .resize-size {
+            font-size: 1.2rem;
+            color: var(--accent);
+            margin-bottom: 1rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 600;
+        }
+        
+        .resize-upload-btn {
+            width: 100%;
+            padding: 0.75rem;
+            background: var(--card);
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-weight: 500;
+            color: var(--text);
+            font-size: 0.9rem;
+        }
+        
+        .resize-upload-btn:hover {
+            border-color: var(--accent);
+            background: rgba(245, 101, 101, 0.05);
+        }
+        
+        .resize-preview {
+            margin-top: 1rem;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+            background: #f9f9f9;
+            min-height: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .resize-preview img {
+            max-width: 100%;
+            height: auto;
+            display: block;
+        }
+        
+        .resize-download-btn {
+            width: 100%;
+            padding: 0.6rem;
+            background: var(--success);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-top: 0.75rem;
+            font-weight: 600;
+            font-size: 0.85rem;
+            transition: all 0.2s ease;
+        }
+        
+        .resize-download-btn:hover:not(:disabled) {
+            background: #38a169;
+            transform: translateY(-2px);
+        }
+        
+        .resize-download-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .warning-text {
+            font-size: 0.85rem;
+            color: #d69e2e;
+            margin-top: 0.5rem;
+            font-style: italic;
+        }
+        
+        .bg-remove-section {
+            background: rgba(99, 102, 241, 0.05);
+            border: 2px solid rgba(99, 102, 241, 0.2);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-top: 1rem;
+        }
+        
+        .bg-remove-toggle {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+        }
+        
+        .toggle-switch {
+            position: relative;
+            width: 50px;
+            height: 26px;
+        }
+        
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: 0.3s;
+            border-radius: 26px;
+        }
+        
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: 0.3s;
+            border-radius: 50%;
+        }
+        
+        .toggle-switch input:checked + .toggle-slider {
+            background-color: #6366f1;
+        }
+        
+        .toggle-switch input:checked + .toggle-slider:before {
+            transform: translateX(24px);
+        }
+        
+        .toggle-label {
+            font-weight: 600;
+            color: var(--primary);
+            font-size: 1rem;
+        }
+        
+        .tolerance-control {
+            margin-top: 1rem;
+        }
+        
+        .tolerance-label {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+        
+        .tolerance-value {
+            font-weight: 600;
+            color: var(--accent);
+            font-family: 'JetBrains Mono', monospace;
+        }
+        
+        .tolerance-slider {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: linear-gradient(to right, #e2e8f0, var(--accent));
+            outline: none;
+            -webkit-appearance: none;
+        }
+        
+        .tolerance-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--accent);
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        .tolerance-slider::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--accent);
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        .bg-remove-btn {
+            width: 100%;
+            padding: 0.75rem;
+            background: #6366f1;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 1rem;
+        }
+        
+        .bg-remove-btn:hover:not(:disabled) {
+            background: #4f46e5;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+        
+        .bg-remove-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .bg-preview {
+            margin-top: 1rem;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            background: 
+                linear-gradient(45deg, #f0f0f0 25%, transparent 25%),
+                linear-gradient(-45deg, #f0f0f0 25%, transparent 25%),
+                linear-gradient(45deg, transparent 75%, #f0f0f0 75%),
+                linear-gradient(-45deg, transparent 75%, #f0f0f0 75%);
+            background-size: 20px 20px;
+            background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+            min-height: 400px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+        
+        .bg-preview img {
+            max-width: 100%;
+            max-height: 500px;
+            display: block;
+        }
+        
+        .bg-preview-placeholder {
+            color: var(--text-muted);
+            text-align: center;
+            font-size: 0.9rem;
+        }
+        
+        .crop-section {
+            background: rgba(16, 185, 129, 0.05);
+            border: 2px solid rgba(16, 185, 129, 0.2);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-top: 1rem;
+        }
+        
+        .crop-canvas-container {
+            position: relative;
+            margin-top: 1rem;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+            background: 
+                linear-gradient(45deg, #f0f0f0 25%, transparent 25%),
+                linear-gradient(-45deg, #f0f0f0 25%, transparent 25%),
+                linear-gradient(45deg, transparent 75%, #f0f0f0 75%),
+                linear-gradient(-45deg, transparent 75%, #f0f0f0 75%);
+            background-size: 20px 20px;
+            background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+            max-height: 550px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .crop-canvas {
+            position: relative;
+            display: inline-block;
+        }
+        
+        .crop-canvas img {
+            display: block;
+            max-width: 100%;
+            max-height: 530px;
+        }
+        
+        .crop-overlay {
+            position: absolute;
+            border: 2px dashed #10b981;
+            box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5);
+            cursor: move;
+        }
+        
+        .crop-handle {
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            background: #10b981;
+            border: 2px solid white;
+            border-radius: 50%;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .crop-handle.nw { top: -6px; left: -6px; cursor: nw-resize; }
+        .crop-handle.ne { top: -6px; right: -6px; cursor: ne-resize; }
+        .crop-handle.sw { bottom: -6px; left: -6px; cursor: sw-resize; }
+        .crop-handle.se { bottom: -6px; right: -6px; cursor: se-resize; }
+        .crop-handle.n { top: -6px; left: 50%; transform: translateX(-50%); cursor: n-resize; }
+        .crop-handle.s { bottom: -6px; left: 50%; transform: translateX(-50%); cursor: s-resize; }
+        .crop-handle.w { top: 50%; left: -6px; transform: translateY(-50%); cursor: w-resize; }
+        .crop-handle.e { top: 50%; right: -6px; transform: translateY(-50%); cursor: e-resize; }
+        
+        .crop-dimensions {
+            text-align: center;
+            margin-top: 0.5rem;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            font-family: 'JetBrains Mono', monospace;
+        }
+        
+        .magic-wand-section {
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid rgba(99, 102, 241, 0.2);
+        }
+        
+        .magic-wand-info {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 0.75rem;
+            padding: 0.5rem;
+            background: rgba(99, 102, 241, 0.05);
+            border-radius: 6px;
+        }
+        
+        .wand-active {
+            cursor: crosshair !important;
+        }
+        
+        .wand-active * {
+            cursor: crosshair !important;
+        }
+        
+        .uploaded-preview-section {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: var(--bg);
+            border: 2px solid var(--border);
+            border-radius: 8px;
+        }
+        
+        .uploaded-preview-title {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--primary);
+            margin-bottom: 0.75rem;
+        }
+        
+        .uploaded-preview-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+            gap: 0.5rem;
+        }
+        
+        .uploaded-preview-item {
+            position: relative;
+            aspect-ratio: 1;
+            border: 2px solid var(--border);
+            border-radius: 6px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .uploaded-preview-item:hover {
+            border-color: var(--accent);
+            transform: scale(1.05);
+        }
+        
+        .uploaded-preview-item.active {
+            border-color: var(--success);
+            box-shadow: 0 0 0 2px rgba(72, 187, 120, 0.3);
+        }
+        
+        .uploaded-preview-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .clear-all-btn {
+            width: 100%;
+            padding: 0.75rem;
+            background: #ef4444;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 1rem;
+        }
+        
+        .clear-all-btn:hover {
+            background: #dc2626;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+        }
+        
+        .control-panel {
+            background: var(--card);
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: var(--shadow);
+            height: fit-content;
+            position: sticky;
+            top: 2rem;
+        }
+        
+        .upload-zone {
+            border: 3px dashed var(--border);
+            border-radius: 12px;
+            padding: 3rem 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: var(--bg);
+            margin-bottom: 2rem;
+        }
+        
+        .upload-zone:hover {
+            border-color: var(--accent);
+            background: rgba(245, 101, 101, 0.05);
+            transform: translateY(-2px);
+        }
+        
+        .upload-zone.dragover {
+            border-color: var(--accent);
+            background: rgba(245, 101, 101, 0.1);
+            transform: scale(1.02);
+        }
+        
+        .upload-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+        
+        .upload-text {
+            font-size: 1.1rem;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
+        }
+        
+        .upload-hint {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            font-family: 'JetBrains Mono', monospace;
+        }
+        
+        input[type="file"] {
+            display: none;
+        }
+        
+        .section {
+            margin-bottom: 2rem;
+            padding-bottom: 2rem;
+            border-bottom: 2px solid var(--border);
+        }
+        
+        .section:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+        
+        .section-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--primary);
+            margin-bottom: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        
+        .grid-options {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+        }
+        
+        .grid-btn {
+            padding: 1rem;
+            border: 2px solid var(--border);
+            background: var(--card);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-weight: 500;
+            color: var(--text);
+            font-family: 'JetBrains Mono', monospace;
+        }
+        
+        .grid-btn:hover {
+            border-color: var(--accent);
+            transform: translateY(-2px);
+        }
+        
+        .grid-btn.active {
+            background: var(--accent);
+            color: white;
+            border-color: var(--accent);
+        }
+        
+        .custom-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;
+            margin-top: 1rem;
+        }
+        
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        
+        .input-group label {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+        
+        .input-group input {
+            padding: 0.75rem;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            font-size: 1rem;
+            font-family: 'JetBrains Mono', monospace;
+            transition: border-color 0.2s ease;
+        }
+        
+        .input-group input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+        
+        .action-btn {
+            width: 100%;
+            padding: 1rem;
+            background: var(--accent);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: 'Noto Sans TC', sans-serif;
+        }
+        
+        .action-btn:hover:not(:disabled) {
+            background: var(--accent-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(245, 101, 101, 0.3);
+        }
+        
+        .action-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .preview-area {
+            background: var(--card);
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: var(--shadow);
+            min-height: 600px;
+        }
+        
+        .preview-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid var(--border);
+        }
+        
+        .preview-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--primary);
+        }
+        
+        .download-all-btn {
+            padding: 0.75rem 1.5rem;
+            background: var(--success);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: 'Noto Sans TC', sans-serif;
+        }
+        
+        .download-all-btn:hover:not(:disabled) {
+            background: #38a169;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(72, 187, 120, 0.3);
+        }
+        
+        .download-all-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .tiles-grid {
+            display: grid;
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+        
+        .tile {
+            position: relative;
+            border: 3px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+            cursor: grab;
+            transition: all 0.3s ease;
+            background: var(--bg);
+            aspect-ratio: 1;
+        }
+        
+        .tile:active {
+            cursor: grabbing;
+        }
+        
+        .tile:hover {
+            transform: scale(1.05);
+            box-shadow: var(--shadow-lg);
+            border-color: var(--accent);
+        }
+        
+        .tile:hover .tile-actions {
+            opacity: 1;
+        }
+        
+        .tile.selected {
+            border-color: var(--success);
+            box-shadow: 0 0 0 3px rgba(72, 187, 120, 0.2);
+        }
+        
+        .tile.dragging {
+            opacity: 0.5;
+            cursor: grabbing;
+        }
+        
+        .tile.drag-over {
+            border-color: #3b82f6;
+            background: rgba(59, 130, 246, 0.1);
+            transform: scale(1.05);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
+        }
+        
+        .tile-actions {
+            position: absolute;
+            bottom: 8px;
+            right: 8px;
+            display: flex;
+            gap: 0.25rem;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+        
+        .tile-action-btn {
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            border: none;
+            padding: 0.4rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.75rem;
+            transition: all 0.2s ease;
+        }
+        
+        .tile-action-btn:hover {
+            background: var(--accent);
+            transform: scale(1.1);
+        }
+        
+        .tile-action-btn.delete:hover {
+            background: #e53e3e;
+        }
+        
+        .tile img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .tile-overlay {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        
+        .tile-checkbox {
+            position: absolute;
+            top: 8px;
+            left: 8px;
+            width: 24px;
+            height: 24px;
+            accent-color: var(--success);
+            cursor: pointer;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: var(--text-muted);
+        }
+        
+        .empty-icon {
+            font-size: 4rem;
+            opacity: 0.3;
+            margin-bottom: 1rem;
+        }
+        
+        .info-badge {
+            display: inline-block;
+            background: rgba(245, 101, 101, 0.1);
+            color: var(--accent);
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            margin-top: 1rem;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        @media (max-width: 1200px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .control-panel {
+                position: static;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>圖片分割工具</h1>
+            <p class="subtitle">輕鬆將圖片分割成多個小圖，支援批次下載</p>
+        </header>
+        
+        <div class="main-grid">
+            <!-- Control Panel -->
+            <div class="control-panel">
+                <!-- Upload Section -->
+                <div class="section">
+                    <div class="upload-zone" id="uploadZone">
+                        <div class="upload-icon">📤</div>
+                        <div class="upload-text">點擊或拖曳圖片到此處</div>
+                        <div class="upload-hint">支援 JPG、PNG、GIF 格式｜可選擇多張圖片</div>
+                        <input type="file" id="fileInput" accept="image/*" multiple>
+                    </div>
+                </div>
+                
+                <!-- Uploaded Images Preview -->
+                <div id="uploadedPreviewSection" style="display: none;">
+                    <div class="uploaded-preview-section">
+                        <div class="uploaded-preview-title">已上傳的圖片</div>
+                        <div class="uploaded-preview-grid" id="uploadedPreviewGrid"></div>
+                    </div>
+                    <button class="clear-all-btn" id="clearAllBtn">
+                        🗑️ 清除全部圖片
+                    </button>
+                </div>
+                
+                <!-- Canvas Crop Section -->
+                <div class="section" id="cropSection" style="display: none;">
+                    <div class="section-title">畫布裁切</div>
+                    <div class="crop-section">
+                        <div style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1rem;">
+                            拖曳邊框調整裁切範圍，移除圖片四周的邊框
+                        </div>
+                        
+                        <div class="crop-canvas-container" id="cropCanvasContainer">
+                            <div class="crop-canvas" id="cropCanvas">
+                                <!-- Image and crop overlay will be inserted here -->
+                            </div>
+                        </div>
+                        
+                        <div class="crop-dimensions" id="cropDimensions">
+                            原始尺寸: -- × --
+                        </div>
+                        
+                        <button class="bg-remove-btn" id="applyCropBtn" style="background: #10b981; margin-top: 1rem;">
+                            ✂️ 套用裁切
+                        </button>
+                        <button class="bg-remove-btn" id="resetCropBtn" style="background: #6b7280; margin-top: 0.5rem;">
+                            🔄 重置裁切
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Background Removal Section -->
+                <div class="section" id="bgRemoveSection" style="display: none;">
+                    <div class="section-title">背景去除</div>
+                    <div class="bg-remove-section">
+                        <div class="bg-remove-toggle">
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="bgRemoveToggle">
+                                <span class="toggle-slider"></span>
+                            </label>
+                            <span class="toggle-label">啟用去背功能</span>
+                        </div>
+                        
+                        <div id="bgRemoveControls" style="display: none;">
+                            <div class="magic-wand-section">
+                                <div class="magic-wand-info">
+                                    🪄 <strong>魔術棒模式：</strong>點擊下方預覽圖片中要移除的背景顏色
+                                </div>
+                                <button class="bg-remove-btn" id="magicWandBtn" style="background: #8b5cf6;">
+                                    🪄 啟用魔術棒
+                                </button>
+                            </div>
+                            
+                            <div class="tolerance-control">
+                                <div class="tolerance-label">
+                                    <span>容忍度（精細調整）</span>
+                                    <span class="tolerance-value" id="toleranceValue">15</span>
+                                </div>
+                                <input type="range" class="tolerance-slider" id="toleranceSlider" 
+                                       min="0" max="50" value="15" step="1">
+                                <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem;">
+                                    <span>精確 (0)</span>
+                                    <span>寬鬆 (50)</span>
+                                </div>
+                            </div>
+                            
+                            <button class="bg-remove-btn" id="applyBgRemoveBtn">
+                                🎨 套用去背
+                            </button>
+                            
+                            <div class="tolerance-control" style="margin-top: 1rem;">
+                                <div class="tolerance-label">
+                                    <span>預覽圖片</span>
+                                    <span class="tolerance-value" id="previewImageIndex">1 / 1</span>
+                                </div>
+                                <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">
+                                    <button class="bg-remove-btn" id="prevImageBtn" style="flex: 1; padding: 0.5rem;">← 上一張</button>
+                                    <button class="bg-remove-btn" id="nextImageBtn" style="flex: 1; padding: 0.5rem;">下一張 →</button>
+                                </div>
+                            </div>
+                            
+                            <div class="bg-preview" id="bgPreview">
+                                <div class="bg-preview-placeholder">
+                                    套用去背後，預覽將顯示在這裡
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Grid Options -->
+                <div class="section">
+                    <div class="section-title">分割方式</div>
+                    <div class="grid-options">
+                        <button class="grid-btn active" data-grid="2">2×2</button>
+                        <button class="grid-btn" data-grid="3">3×3</button>
+                        <button class="grid-btn" data-grid="4">4×4</button>
+                    </div>
+                    <div class="custom-grid">
+                        <div class="input-group">
+                            <label>列數</label>
+                            <input type="number" id="rows" min="1" max="20" value="2">
+                        </div>
+                        <div class="input-group">
+                            <label>欄數</label>
+                            <input type="number" id="cols" min="1" max="20" value="2">
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Action Button -->
+                <div class="section">
+                    <button class="action-btn" id="splitBtn" disabled>開始分割圖片</button>
+                    <div class="info-badge" id="imageInfo" style="display: none;"></div>
+                    <div class="warning-text" id="sizeWarning" style="display: none;">
+                        ⚠️ 分割後圖片將自動縮放至 370×320 px 內
+                    </div>
+                </div>
+                <!-- Grid Preview Section -->
+                <div class="section">
+                    <div class="section-title">分割線預覽</div>
+                    <div class="grid-preview-container" id="gridPreviewContainer">
+                        <div class="grid-preview-placeholder">
+                            <div class="grid-preview-placeholder-icon">📐</div>
+                            <p>上傳圖片後<br>此處顯示分割預覽</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Preview Area -->
+            <div class="preview-area">
+                <!-- Image Resize Section -->
+                <div style="margin-bottom: 2rem;">
+                    <h3 style="font-size: 1.2rem; font-weight: 600; color: var(--primary); margin-bottom: 1rem;">圖片尺寸調整</h3>
+                    <div class="resize-section">
+                        <!-- 240x240 Resizer -->
+                        <div class="resize-card" id="resizeCard240">
+                            <div class="resize-title">正方形調整</div>
+                            <div class="resize-size">240×240</div>
+                            <button class="resize-upload-btn" onclick="document.getElementById('resize240').click()">
+                                📷 上傳圖片
+                            </button>
+                            <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.5rem;">
+                                或拖曳分割圖片到此處
+                            </div>
+                            <input type="file" id="resize240" accept="image/*" style="display: none;">
+                            <div class="resize-preview" id="preview240">
+                                <span style="color: #999; font-size: 0.85rem;">預覽區</span>
+                            </div>
+                            <button class="resize-download-btn" id="download240" disabled>下載 240×240</button>
+                        </div>
+                        
+                        <!-- 96x74 Resizer -->
+                        <div class="resize-card" id="resizeCard96">
+                            <div class="resize-title">小型圖片調整</div>
+                            <div class="resize-size">96×74</div>
+                            <button class="resize-upload-btn" onclick="document.getElementById('resize96').click()">
+                                📷 上傳圖片
+                            </button>
+                            <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.5rem;">
+                                或拖曳分割圖片到此處
+                            </div>
+                            <input type="file" id="resize96" accept="image/*" style="display: none;">
+                            <div class="resize-preview" id="preview96">
+                                <span style="color: #999; font-size: 0.85rem;">預覽區</span>
+                            </div>
+                            <button class="resize-download-btn" id="download96" disabled>下載 96×74</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="preview-header">
+                    <div>
+                        <div class="preview-title">預覽分割結果</div>
+                        <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.25rem;">
+                            💡 提示: 可拖曳圖片以調整順序
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 0.75rem;">
+                        <button class="download-all-btn" id="renumberBtn" disabled style="background: #f59e0b;">
+                            🔢 重新編號
+                        </button>
+                        <button class="download-all-btn" id="downloadAllBtn" disabled>
+                            📦 下載全部 (ZIP)
+                        </button>
+                    </div>
+                </div>
+                
+                <div id="tilesContainer">
+                    <div class="empty-state">
+                        <div class="empty-icon">🖼️</div>
+                        <p>上傳圖片後，分割結果將顯示在這裡</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script>
+        const uploadZone = document.getElementById('uploadZone');
+        const fileInput = document.getElementById('fileInput');
+        const splitBtn = document.getElementById('splitBtn');
+        const downloadAllBtn = document.getElementById('downloadAllBtn');
+        const renumberBtn = document.getElementById('renumberBtn');
+        const tilesContainer = document.getElementById('tilesContainer');
+        const imageInfo = document.getElementById('imageInfo');
+        const sizeWarning = document.getElementById('sizeWarning');
+        const rowsInput = document.getElementById('rows');
+        const colsInput = document.getElementById('cols');
+        const gridBtns = document.querySelectorAll('.grid-btn');
+        const gridPreviewContainer = document.getElementById('gridPreviewContainer');
+        
+        // Background removal elements
+        const bgRemoveSection = document.getElementById('bgRemoveSection');
+        const bgRemoveToggle = document.getElementById('bgRemoveToggle');
+        const bgRemoveControls = document.getElementById('bgRemoveControls');
+        const toleranceSlider = document.getElementById('toleranceSlider');
+        const toleranceValue = document.getElementById('toleranceValue');
+        const applyBgRemoveBtn = document.getElementById('applyBgRemoveBtn');
+        const bgPreview = document.getElementById('bgPreview');
+        const prevImageBtn = document.getElementById('prevImageBtn');
+        const nextImageBtn = document.getElementById('nextImageBtn');
+        const previewImageIndex = document.getElementById('previewImageIndex');
+        const magicWandBtn = document.getElementById('magicWandBtn');
+        
+        // Crop elements
+        const cropSection = document.getElementById('cropSection');
+        const cropCanvas = document.getElementById('cropCanvas');
+        const cropCanvasContainer = document.getElementById('cropCanvasContainer');
+        const cropDimensions = document.getElementById('cropDimensions');
+        const applyCropBtn = document.getElementById('applyCropBtn');
+        const resetCropBtn = document.getElementById('resetCropBtn');
+        
+        // Uploaded preview elements
+        const uploadedPreviewSection = document.getElementById('uploadedPreviewSection');
+        const uploadedPreviewGrid = document.getElementById('uploadedPreviewGrid');
+        const clearAllBtn = document.getElementById('clearAllBtn');
+        
+        let uploadedImages = [];
+        let croppedImages = []; // Store cropped images
+        let processedImages = []; // Store background-removed images
+        let currentPreviewIndex = 0;
+        let currentBgPreviewIndex = 0; // Separate index for background removal preview
+        let currentCropImageIndex = 0; // Track which image is being cropped
+        let tiles = [];
+        let tileCounter = 1;
+        let bgRemovalEnabled = false;
+        let magicWandMode = false;
+        let magicWandColor = null;
+        let cropData = null;
+        
+        // Grid line adjustment
+        let gridLinePositions = { horizontal: [], vertical: [] };
+        let isDraggingGridLine = false;
+        let draggingLineIndex = -1;
+        let draggingLineType = null;
+        
+        // Resize functionality
+        const resizers = {
+            240: { 
+                input: document.getElementById('resize240'), 
+                preview: document.getElementById('preview240'), 
+                download: document.getElementById('download240'), 
+                card: document.getElementById('resizeCard240'),
+                canvas: null 
+            },
+            96: { 
+                input: document.getElementById('resize96'), 
+                preview: document.getElementById('preview96'), 
+                download: document.getElementById('download96'), 
+                card: document.getElementById('resizeCard96'),
+                canvas: null 
+            }
+        };
+        
+        // Background removal function with flood fill (只移除連續區域)
+        function removeBackground(img, tolerance, targetColor = null) {
+            const canvas = document.createElement('canvas');
+            canvas.width = img.width;
+            canvas.height = img.height;
+            const ctx = canvas.getContext('2d');
+            
+            ctx.drawImage(img, 0, 0);
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = imageData.data;
+            
+            let bgColor;
+            if (targetColor) {
+                // Use magic wand selected color
+                bgColor = targetColor;
+            } else {
+                // Sample corner colors to determine background
+                bgColor = getPixelColor(data, 0, 0, canvas.width);
+            }
+            
+            // Create a visited array to track which pixels we've checked
+            const visited = new Uint8Array(canvas.width * canvas.height);
+            
+            // Flood fill from corners to find connected background regions
+            const startPoints = [
+                {x: 0, y: 0},  // Top-left
+                {x: canvas.width - 1, y: 0},  // Top-right
+                {x: 0, y: canvas.height - 1},  // Bottom-left
+                {x: canvas.width - 1, y: canvas.height - 1}  // Bottom-right
+            ];
+            
+            // Add edge points for more complete edge removal
+            const edgeStep = Math.max(1, Math.floor(Math.min(canvas.width, canvas.height) / 20));
+            for (let x = 0; x < canvas.width; x += edgeStep) {
+                startPoints.push({x: x, y: 0});  // Top edge
+                startPoints.push({x: x, y: canvas.height - 1});  // Bottom edge
+            }
+            for (let y = 0; y < canvas.height; y += edgeStep) {
+                startPoints.push({x: 0, y: y});  // Left edge
+                startPoints.push({x: canvas.width - 1, y: y});  // Right edge
+            }
+            
+            // Perform flood fill from each start point
+            startPoints.forEach(point => {
+                floodFill(data, visited, point.x, point.y, canvas.width, canvas.height, bgColor, tolerance);
+            });
+            
+            ctx.putImageData(imageData, 0, 0);
+            return canvas;
+        }
+        
+        function floodFill(data, visited, startX, startY, width, height, targetColor, tolerance) {
+            const stack = [{x: startX, y: startY}];
+            const toleranceScaled = tolerance * 2.55;
+            
+            while (stack.length > 0) {
+                const {x, y} = stack.pop();
+                
+                // Check bounds
+                if (x < 0 || x >= width || y < 0 || y >= height) continue;
+                
+                const index = y * width + x;
+                
+                // Skip if already visited
+                if (visited[index]) continue;
+                
+                // Get pixel color
+                const pixelIndex = index * 4;
+                const r = data[pixelIndex];
+                const g = data[pixelIndex + 1];
+                const b = data[pixelIndex + 2];
+                
+                // Calculate color distance
+                const distance = Math.sqrt(
+                    Math.pow(r - targetColor.r, 2) +
+                    Math.pow(g - targetColor.g, 2) +
+                    Math.pow(b - targetColor.b, 2)
+                );
+                
+                // If color doesn't match, skip this pixel
+                if (distance >= toleranceScaled) continue;
+                
+                // Mark as visited and make transparent
+                visited[index] = 1;
+                data[pixelIndex + 3] = 0;  // Set alpha to 0
+                
+                // Add neighboring pixels to stack
+                stack.push({x: x + 1, y: y});
+                stack.push({x: x - 1, y: y});
+                stack.push({x: x, y: y + 1});
+                stack.push({x: x, y: y - 1});
+            }
+        }
+        
+        function getPixelColor(data, x, y, width) {
+            const index = (y * width + x) * 4;
+            return {
+                r: data[index],
+                g: data[index + 1],
+                b: data[index + 2]
+            };
+        }
+        
+        // Crop functionality
+        function initCropTool(img) {
+            cropCanvas.innerHTML = '';
+            
+            const imgElement = document.createElement('img');
+            imgElement.src = img.src;
+            imgElement.style.maxWidth = '100%';
+            imgElement.style.maxHeight = '530px';
+            cropCanvas.appendChild(imgElement);
+            
+            imgElement.onload = () => {
+                const rect = imgElement.getBoundingClientRect();
+                
+                // Initialize crop area (10% margin from edges)
+                const margin = 0.1;
+                cropData = {
+                    left: rect.width * margin,
+                    top: rect.height * margin,
+                    width: rect.width * (1 - 2 * margin),
+                    height: rect.height * (1 - 2 * margin),
+                    imgWidth: rect.width,
+                    imgHeight: rect.height,
+                    originalWidth: img.width,  // Store actual image pixel dimensions
+                    originalHeight: img.height
+                };
+                
+                createCropOverlay();
+                updateCropDimensions();
+            };
+            
+            // Also handle if image is already loaded
+            if (imgElement.complete) {
+                imgElement.onload();
+            }
+        }
+        
+        function createCropOverlay() {
+            // Remove existing overlay
+            const existingOverlay = cropCanvas.querySelector('.crop-overlay');
+            if (existingOverlay) existingOverlay.remove();
+            
+            const overlay = document.createElement('div');
+            overlay.className = 'crop-overlay';
+            overlay.style.left = cropData.left + 'px';
+            overlay.style.top = cropData.top + 'px';
+            overlay.style.width = cropData.width + 'px';
+            overlay.style.height = cropData.height + 'px';
+            
+            // Add handles
+            const handles = ['nw', 'ne', 'sw', 'se', 'n', 's', 'w', 'e'];
+            handles.forEach(pos => {
+                const handle = document.createElement('div');
+                handle.className = `crop-handle ${pos}`;
+                handle.dataset.position = pos;
+                overlay.appendChild(handle);
+                
+                handle.addEventListener('mousedown', startResize);
+            });
+            
+            overlay.addEventListener('mousedown', startMove);
+            cropCanvas.appendChild(overlay);
+        }
+        
+        let isDragging = false;
+        let isResizing = false;
+        let startX, startY;
+        let resizePosition;
+        
+        function startMove(e) {
+            if (e.target.classList.contains('crop-handle')) return;
+            isDragging = true;
+            startX = e.clientX - cropData.left;
+            startY = e.clientY - cropData.top;
+            e.preventDefault();
+        }
+        
+        function startResize(e) {
+            isResizing = true;
+            resizePosition = e.target.dataset.position;
+            startX = e.clientX;
+            startY = e.clientY;
+            e.stopPropagation();
+            e.preventDefault();
+        }
+        
+        document.addEventListener('mousemove', (e) => {
+            if (isDragging) {
+                const newLeft = e.clientX - startX;
+                const newTop = e.clientY - startY;
+                
+                cropData.left = Math.max(0, Math.min(newLeft, cropData.imgWidth - cropData.width));
+                cropData.top = Math.max(0, Math.min(newTop, cropData.imgHeight - cropData.height));
+                
+                const overlay = cropCanvas.querySelector('.crop-overlay');
+                overlay.style.left = cropData.left + 'px';
+                overlay.style.top = cropData.top + 'px';
+                updateCropDimensions();
+            } else if (isResizing) {
+                const deltaX = e.clientX - startX;
+                const deltaY = e.clientY - startY;
+                
+                const overlay = cropCanvas.querySelector('.crop-overlay');
+                
+                if (resizePosition.includes('e')) {
+                    cropData.width = Math.max(50, Math.min(cropData.width + deltaX, cropData.imgWidth - cropData.left));
+                }
+                if (resizePosition.includes('w')) {
+                    const newWidth = cropData.width - deltaX;
+                    const newLeft = cropData.left + deltaX;
+                    if (newWidth >= 50 && newLeft >= 0) {
+                        cropData.width = newWidth;
+                        cropData.left = newLeft;
+                    }
+                }
+                if (resizePosition.includes('s')) {
+                    cropData.height = Math.max(50, Math.min(cropData.height + deltaY, cropData.imgHeight - cropData.top));
+                }
+                if (resizePosition.includes('n')) {
+                    const newHeight = cropData.height - deltaY;
+                    const newTop = cropData.top + deltaY;
+                    if (newHeight >= 50 && newTop >= 0) {
+                        cropData.height = newHeight;
+                        cropData.top = newTop;
+                    }
+                }
+                
+                overlay.style.left = cropData.left + 'px';
+                overlay.style.top = cropData.top + 'px';
+                overlay.style.width = cropData.width + 'px';
+                overlay.style.height = cropData.height + 'px';
+                
+                startX = e.clientX;
+                startY = e.clientY;
+                updateCropDimensions();
+            }
+        });
+        
+        document.addEventListener('mouseup', () => {
+            isDragging = false;
+            isResizing = false;
+        });
+        
+        function updateCropDimensions() {
+            const scaleX = cropData.originalWidth / cropData.imgWidth;
+            const scaleY = cropData.originalHeight / cropData.imgHeight;
+            
+            const actualWidth = Math.round(cropData.width * scaleX);
+            const actualHeight = Math.round(cropData.height * scaleY);
+            
+            cropDimensions.textContent = `裁切尺寸: ${actualWidth} × ${actualHeight} px`;
+        }
+        
+        function applyCrop() {
+            if (!cropData || uploadedImages.length === 0) return;
+            
+            const scaleX = cropData.originalWidth / cropData.imgWidth;
+            const scaleY = cropData.originalHeight / cropData.imgHeight;
+            
+            const actualLeft = Math.floor(cropData.left * scaleX);
+            const actualTop = Math.floor(cropData.top * scaleY);
+            const actualWidth = Math.floor(cropData.width * scaleX);
+            const actualHeight = Math.floor(cropData.height * scaleY);
+            
+            // Apply crop to ALL uploaded images
+            let processedCount = 0;
+            
+            uploadedImages.forEach((imageData, index) => {
+                const canvas = document.createElement('canvas');
+                canvas.width = actualWidth;
+                canvas.height = actualHeight;
+                const ctx = canvas.getContext('2d');
+                
+                // Use the original image for each index
+                const sourceImg = imageData.originalImg || imageData.img;
+                
+                ctx.drawImage(
+                    sourceImg,
+                    actualLeft, actualTop, actualWidth, actualHeight,
+                    0, 0, actualWidth, actualHeight
+                );
+                
+                // Update the image with cropped version
+                const img = new Image();
+                const dataUrl = canvas.toDataURL('image/png');
+                
+                img.onload = () => {
+                    // Store the cropped image
+                    uploadedImages[index].img = img;
+                    
+                    // Reset processed version if exists
+                    if (processedImages[index]) {
+                        processedImages[index] = null;
+                    }
+                    
+                    processedCount++;
+                    
+                    // When all images are cropped
+                    if (processedCount === uploadedImages.length) {
+                        console.log(`裁切完成: 已套用到全部 ${uploadedImages.length} 張圖片, 新尺寸: ${actualWidth}×${actualHeight} px`);
+                        
+                        updateGridPreview();
+                        updateUploadedPreviewGrid();
+                        
+                        // Reinitialize crop tool with current image
+                        setTimeout(() => {
+                            initCropTool(uploadedImages[currentCropImageIndex].img);
+                        }, 100);
+                    }
+                };
+                
+                img.onerror = () => {
+                    console.error(`圖片 ${index + 1} 裁切失敗`);
+                    processedCount++;
+                };
+                
+                img.src = dataUrl;
+            });
+        }
+        
+        // Handle multiple files upload
+        function handleFiles(files) {
+            const fileArray = Array.from(files).filter(f => f.type.startsWith('image/'));
+            
+            if (fileArray.length === 0) {
+                alert('請上傳圖片檔案！');
+                return;
+            }
+            
+            const startIndex = uploadedImages.length;
+            let loadedCount = 0;
+            
+            fileArray.forEach((file, index) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        uploadedImages.push({
+                            img: img,
+                            name: file.name.split('.')[0],
+                            originalImg: img // Store original for crop reset
+                        });
+                        processedImages.push(null); // Initially no processed version
+                        loadedCount++;
+                        
+                        if (loadedCount === fileArray.length) {
+                            // All new images loaded
+                            splitBtn.disabled = false;
+                            imageInfo.style.display = 'block';
+                            imageInfo.textContent = `已上傳 ${uploadedImages.length} 張圖片`;
+                            cropSection.style.display = 'block';
+                            bgRemoveSection.style.display = 'block';
+                            uploadedPreviewSection.style.display = 'block';
+                            
+                            // Update uploadZone display
+                            const uploadIcon = uploadZone.querySelector('.upload-icon');
+                            const uploadText = uploadZone.querySelector('.upload-text');
+                            const uploadHint = uploadZone.querySelector('.upload-hint');
+                            
+                            if (uploadIcon) uploadIcon.textContent = '✓';
+                            if (uploadText) {
+                                uploadText.textContent = `已載入 ${uploadedImages.length} 張圖片`;
+                                uploadText.style.color = '#48bb78';
+                                uploadText.style.fontWeight = '600';
+                            }
+                            if (uploadHint) uploadHint.textContent = '點擊或拖曳以重新上傳';
+                            
+                            updateUploadedPreviewGrid();
+                            updatePreviewNavigation();
+                            updateGridPreview();
+                            
+                            // Initialize crop tool with first newly uploaded image
+                            currentCropImageIndex = startIndex;
+                            initCropTool(uploadedImages[currentCropImageIndex].img);
+                        }
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+        
+        function updateUploadedPreviewGrid() {
+            uploadedPreviewGrid.innerHTML = '';
+            
+            uploadedImages.forEach((imageData, index) => {
+                const item = document.createElement('div');
+                item.className = 'uploaded-preview-item';
+                if (index === currentCropImageIndex) {
+                    item.classList.add('active');
+                }
+                
+                const img = document.createElement('img');
+                img.src = imageData.img.src;
+                item.appendChild(img);
+                
+                item.addEventListener('click', () => {
+                    // Update active state
+                    document.querySelectorAll('.uploaded-preview-item').forEach(i => i.classList.remove('active'));
+                    item.classList.add('active');
+                    
+                    currentCropImageIndex = index;
+                    initCropTool(uploadedImages[index].img);
+                });
+                
+                uploadedPreviewGrid.appendChild(item);
+            });
+        }
+        
+        // Clear all button
+        clearAllBtn.addEventListener('click', () => {
+            if (confirm('確定要清除所有圖片嗎？這將重置所有設定。')) {
+                uploadedImages = [];
+                croppedImages = [];
+                processedImages = [];
+                tiles = [];
+                tileCounter = 1;
+                currentPreviewIndex = 0;
+                currentBgPreviewIndex = 0;
+                currentCropImageIndex = 0;
+                bgRemovalEnabled = false;
+                magicWandMode = false;
+                magicWandColor = null;
+                
+                // Reset UI
+                uploadedPreviewSection.style.display = 'none';
+                cropSection.style.display = 'none';
+                bgRemoveSection.style.display = 'none';
+                splitBtn.disabled = true;
+                downloadAllBtn.disabled = true;
+                renumberBtn.disabled = true;
+                imageInfo.style.display = 'none';
+                
+                bgRemoveToggle.checked = false;
+                bgRemoveControls.style.display = 'none';
+                bgPreview.innerHTML = '<div class="bg-preview-placeholder">套用去背後，預覽將顯示在這裡</div>';
+                
+                tilesContainer.innerHTML = '<div class="empty-state"><div class="empty-icon">🖼️</div><p>上傳圖片後，分割結果將顯示在這裡</p></div>';
+                gridPreviewContainer.innerHTML = '<div class="grid-preview-placeholder"><div class="grid-preview-placeholder-icon">📐</div><p>上傳圖片後<br>此處顯示分割預覽</p></div>';
+                
+                // Reset file input
+                fileInput.value = '';
+            }
+        });
+        
+        function updatePreviewNavigation() {
+            if (uploadedImages.length > 0) {
+                previewImageIndex.textContent = `${currentBgPreviewIndex + 1} / ${uploadedImages.length}`;
+                prevImageBtn.disabled = currentBgPreviewIndex === 0;
+                nextImageBtn.disabled = currentBgPreviewIndex === uploadedImages.length - 1;
+            }
+        }
+        
+        function updateBgPreviewImage() {
+            if (processedImages[currentBgPreviewIndex]) {
+                bgPreview.innerHTML = `<img src="${processedImages[currentBgPreviewIndex].toDataURL('image/png')}" alt="去背預覽">`;
+            } else {
+                bgPreview.innerHTML = '<div class="bg-preview-placeholder">此圖片尚未套用去背</div>';
+            }
+            updatePreviewNavigation();
+        }
+        
+        function handleResizeFromFile(file, targetSize, elements) {
+            if (!file.type.startsWith('image/')) {
+                alert('請上傳圖片檔案！');
+                return;
+            }
+            
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = new Image();
+                img.onload = () => {
+                    resizeImage(img, targetSize, elements);
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+        
+        function handleResizeFromCanvas(sourceCanvas, targetSize, elements) {
+            const img = new Image();
+            img.onload = () => {
+                resizeImage(img, targetSize, elements);
+            };
+            img.src = sourceCanvas.toDataURL('image/png');
+        }
+        
+        function resizeImage(img, targetSize, elements) {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            
+            if (targetSize === 240) {
+                canvas.width = 240;
+                canvas.height = 240;
+            } else {
+                canvas.width = 96;
+                canvas.height = 74;
+            }
+            
+            // Draw image to fit canvas (cover mode)
+            const scale = Math.max(canvas.width / img.width, canvas.height / img.height);
+            const x = (canvas.width - img.width * scale) / 2;
+            const y = (canvas.height - img.height * scale) / 2;
+            
+            ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
+            
+            elements.canvas = canvas;
+            elements.preview.innerHTML = `<img src="${canvas.toDataURL('image/png')}" alt="Preview">`;
+            elements.download.disabled = false;
+        }
+        
+        // Update grid preview
+        function updateGridPreview() {
+            if (uploadedImages.length === 0) return;
+            
+            const rows = parseInt(rowsInput.value);
+            const cols = parseInt(colsInput.value);
+            
+            // Clear container completely
+            gridPreviewContainer.innerHTML = '';
+            
+            // Reset grid line positions if grid size changed
+            if (gridLinePositions.horizontal.length !== rows - 1 || gridLinePositions.vertical.length !== cols - 1) {
+                gridLinePositions.horizontal = Array.from({ length: rows - 1 }, (_, i) => (i + 1) / rows);
+                gridLinePositions.vertical = Array.from({ length: cols - 1 }, (_, i) => (i + 1) / cols);
+            }
+            
+            // Use processed image if available, otherwise use original
+            const currentImageData = uploadedImages[currentPreviewIndex];
+            const currentImage = (bgRemovalEnabled && processedImages[currentPreviewIndex]) 
+                ? processedImages[currentPreviewIndex] 
+                : currentImageData.img;
+            
+            // Add image
+            const img = document.createElement('img');
+            if (currentImage instanceof HTMLCanvasElement) {
+                img.src = currentImage.toDataURL('image/png');
+            } else {
+                img.src = currentImage.src;
+            }
+            img.className = 'grid-preview-image';
+            gridPreviewContainer.appendChild(img);
+            
+            // Wait for image to render to get actual dimensions
+            const setupOverlay = () => {
+                const imgRect = img.getBoundingClientRect();
+                const containerRect = gridPreviewContainer.getBoundingClientRect();
+                
+                // Calculate image position relative to container
+                const imgLeft = (containerRect.width - imgRect.width) / 2;
+                const imgTop = (containerRect.height - imgRect.height) / 2;
+                
+                // Remove any existing overlay first
+                const existingOverlay = gridPreviewContainer.querySelector('.grid-overlay');
+                if (existingOverlay) {
+                    existingOverlay.remove();
+                }
+                
+                // Add grid overlay
+                const overlay = document.createElement('div');
+                overlay.className = 'grid-overlay';
+                overlay.style.left = imgLeft + 'px';
+                overlay.style.top = imgTop + 'px';
+                overlay.style.width = imgRect.width + 'px';
+                overlay.style.height = imgRect.height + 'px';
+                
+                // Add horizontal lines
+                gridLinePositions.horizontal.forEach((position, i) => {
+                    const line = document.createElement('div');
+                    line.className = 'grid-line horizontal';
+                    line.style.top = `${position * 100}%`;
+                    line.dataset.index = i;
+                    line.dataset.type = 'horizontal';
+                    
+                    line.addEventListener('mousedown', startDragGridLine);
+                    overlay.appendChild(line);
+                });
+                
+                // Add vertical lines
+                gridLinePositions.vertical.forEach((position, i) => {
+                    const line = document.createElement('div');
+                    line.className = 'grid-line vertical';
+                    line.style.left = `${position * 100}%`;
+                    line.dataset.index = i;
+                    line.dataset.type = 'vertical';
+                    
+                    line.addEventListener('mousedown', startDragGridLine);
+                    overlay.appendChild(line);
+                });
+                
+                gridPreviewContainer.appendChild(overlay);
+            };
+            
+            if (img.complete) {
+                setupOverlay();
+            } else {
+                img.onload = setupOverlay;
+            }
+        }
+        
+        function startDragGridLine(e) {
+            isDraggingGridLine = true;
+            draggingLineIndex = parseInt(e.target.dataset.index);
+            draggingLineType = e.target.dataset.type;
+            e.target.classList.add('dragging');
+            e.preventDefault();
+        }
+        
+        document.addEventListener('mousemove', (e) => {
+            if (isDraggingGridLine) {
+                const overlay = gridPreviewContainer.querySelector('.grid-overlay');
+                if (!overlay) return;
+                
+                const rect = overlay.getBoundingClientRect();
+                
+                if (draggingLineType === 'horizontal') {
+                    const relativeY = (e.clientY - rect.top) / rect.height;
+                    const clampedY = Math.max(0.05, Math.min(0.95, relativeY));
+                    gridLinePositions.horizontal[draggingLineIndex] = clampedY;
+                    
+                    const line = overlay.querySelector(`.grid-line.horizontal[data-index="${draggingLineIndex}"]`);
+                    if (line) line.style.top = `${clampedY * 100}%`;
+                } else if (draggingLineType === 'vertical') {
+                    const relativeX = (e.clientX - rect.left) / rect.width;
+                    const clampedX = Math.max(0.05, Math.min(0.95, relativeX));
+                    gridLinePositions.vertical[draggingLineIndex] = clampedX;
+                    
+                    const line = overlay.querySelector(`.grid-line.vertical[data-index="${draggingLineIndex}"]`);
+                    if (line) line.style.left = `${clampedX * 100}%`;
+                }
+            }
+        });
+        
+        document.addEventListener('mouseup', () => {
+            if (isDraggingGridLine) {
+                const draggingLine = document.querySelector('.grid-line.dragging');
+                if (draggingLine) draggingLine.classList.remove('dragging');
+                isDraggingGridLine = false;
+                draggingLineIndex = -1;
+                draggingLineType = null;
+            }
+        });
+        
+        function splitImage(img, rows, cols) {
+            // Calculate split positions based on adjusted grid lines
+            const rowPositions = [0, ...gridLinePositions.horizontal.map(p => p), 1];
+            const colPositions = [0, ...gridLinePositions.vertical.map(p => p), 1];
+            
+            // Set grid layout - 4 columns instead of 5
+            tilesContainer.style.display = 'grid';
+            tilesContainer.style.gridTemplateColumns = `repeat(auto-fill, minmax(200px, 1fr))`;
+            tilesContainer.style.gap = '1.5rem';
+            
+            for (let row = 0; row < rows; row++) {
+                for (let col = 0; col < cols; col++) {
+                    // Calculate tile dimensions based on adjusted positions
+                    const srcX = colPositions[col] * img.width;
+                    const srcY = rowPositions[row] * img.height;
+                    const srcWidth = (colPositions[col + 1] - colPositions[col]) * img.width;
+                    const srcHeight = (rowPositions[row + 1] - rowPositions[row]) * img.height;
+                    
+                    let tileWidth = srcWidth;
+                    let tileHeight = srcHeight;
+                    
+                    // Check if tiles exceed max size and scale down if needed
+                    const maxWidth = 370;
+                    const maxHeight = 320;
+                    let scale = 1;
+                    
+                    if (tileWidth > maxWidth || tileHeight > maxHeight) {
+                        scale = Math.min(maxWidth / tileWidth, maxHeight / tileHeight);
+                        tileWidth = tileWidth * scale;
+                        tileHeight = tileHeight * scale;
+                        sizeWarning.style.display = 'block';
+                    } else {
+                        sizeWarning.style.display = 'none';
+                    }
+                    
+                    // Ensure dimensions are even numbers (round down to nearest even)
+                    tileWidth = Math.floor(tileWidth / 2) * 2;
+                    tileHeight = Math.floor(tileHeight / 2) * 2;
+                    
+                    // Ensure minimum size of 2x2
+                    tileWidth = Math.max(2, tileWidth);
+                    tileHeight = Math.max(2, tileHeight);
+                    
+                    const canvas = document.createElement('canvas');
+                    canvas.width = tileWidth;
+                    canvas.height = tileHeight;
+                    const ctx = canvas.getContext('2d');
+                    
+                    ctx.drawImage(
+                        img,
+                        srcX, srcY, srcWidth, srcHeight,
+                        0, 0, tileWidth, tileHeight
+                    );
+                    
+                    const tileIndex = tiles.length;
+                    const tileDiv = document.createElement('div');
+                    tileDiv.className = 'tile selected';
+                    tileDiv.draggable = true;
+                    
+                    // Drag start
+                    tileDiv.addEventListener('dragstart', (e) => {
+                        e.dataTransfer.effectAllowed = 'move';
+                        e.dataTransfer.setData('text/html', tileDiv.innerHTML);
+                        // Store tile index for drag to resize areas
+                        e.dataTransfer.setData('text/plain', tileIndex.toString());
+                        tileDiv.classList.add('dragging');
+                        tileDiv.style.opacity = '0.4';
+                    });
+                    
+                    tileDiv.addEventListener('dragend', (e) => {
+                        tileDiv.classList.remove('dragging');
+                        tileDiv.style.opacity = '1';
+                        // Remove all dragover effects
+                        document.querySelectorAll('.tile').forEach(t => {
+                            t.classList.remove('drag-over');
+                        });
+                    });
+                    
+                    // Drag over - allow drop
+                    tileDiv.addEventListener('dragover', (e) => {
+                        e.preventDefault();
+                        e.dataTransfer.dropEffect = 'move';
+                        
+                        const dragging = document.querySelector('.tile.dragging');
+                        if (dragging && dragging !== tileDiv) {
+                            tileDiv.classList.add('drag-over');
+                        }
+                    });
+                    
+                    tileDiv.addEventListener('dragleave', (e) => {
+                        tileDiv.classList.remove('drag-over');
+                    });
+                    
+                    // Drop - swap positions
+                    tileDiv.addEventListener('drop', (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        
+                        const dragging = document.querySelector('.tile.dragging');
+                        
+                        if (dragging && dragging !== tileDiv) {
+                            // Get all tiles before swap
+                            const allTilesBefore = Array.from(tilesContainer.querySelectorAll('.tile'));
+                            const dragIndex = allTilesBefore.indexOf(dragging);
+                            const dropIndex = allTilesBefore.indexOf(tileDiv);
+                            
+                            console.log(`交換: ${dragIndex} ⇄ ${dropIndex}`);
+                            
+                            // Swap DOM elements first
+                            const parent = tileDiv.parentNode;
+                            const dragNext = dragging.nextSibling;
+                            const dropNext = tileDiv.nextSibling;
+                            
+                            // Insert dragging before drop's next sibling
+                            if (dropNext === dragging) {
+                                parent.insertBefore(tileDiv, dragNext);
+                            } else {
+                                parent.insertBefore(dragging, dropNext);
+                                parent.insertBefore(tileDiv, dragNext);
+                            }
+                            
+                            // After DOM swap, update tiles array and element references
+                            if (tiles[dragIndex] && tiles[dropIndex]) {
+                                // Swap in tiles array
+                                [tiles[dragIndex], tiles[dropIndex]] = [tiles[dropIndex], tiles[dragIndex]];
+                                
+                                // Update element references to match new positions
+                                tiles[dragIndex].element = tileDiv;
+                                tiles[dropIndex].element = dragging;
+                                
+                                console.log(`tiles 數組已更新`);
+                            }
+                        }
+                        
+                        tileDiv.classList.remove('drag-over');
+                    });
+                    
+                    const tileImg = document.createElement('img');
+                    tileImg.src = canvas.toDataURL('image/png');
+                    
+                    const overlay = document.createElement('div');
+                    overlay.className = 'tile-overlay';
+                    overlay.textContent = String(tileCounter).padStart(2, '0');
+                    
+                    const checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.className = 'tile-checkbox';
+                    checkbox.checked = true;
+                    checkbox.addEventListener('change', (e) => {
+                        if (e.target.checked) {
+                            tileDiv.classList.add('selected');
+                        } else {
+                            tileDiv.classList.remove('selected');
+                        }
+                    });
+                    
+                    // Action buttons
+                    const actions = document.createElement('div');
+                    actions.className = 'tile-actions';
+                    
+                    const downloadBtn = document.createElement('button');
+                    downloadBtn.className = 'tile-action-btn';
+                    downloadBtn.textContent = '💾';
+                    downloadBtn.title = '下載';
+                    const currentCounter = tileCounter;
+                    downloadBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const link = document.createElement('a');
+                        link.download = `${String(currentCounter).padStart(2, '0')}.png`;
+                        link.href = canvas.toDataURL('image/png');
+                        link.click();
+                    });
+                    
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.className = 'tile-action-btn delete';
+                    deleteBtn.textContent = '🗑️';
+                    deleteBtn.title = '刪除';
+                    deleteBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        tileDiv.remove();
+                        tiles[tileIndex] = null; // Mark as deleted
+                    });
+                    
+                    actions.appendChild(downloadBtn);
+                    actions.appendChild(deleteBtn);
+                    
+                    tileDiv.appendChild(checkbox);
+                    tileDiv.appendChild(tileImg);
+                    tileDiv.appendChild(overlay);
+                    tileDiv.appendChild(actions);
+                    tilesContainer.appendChild(tileDiv);
+                    
+                    tiles.push({
+                        canvas,
+                        name: `${String(tileCounter).padStart(2, '0')}.png`,
+                        checkbox,
+                        element: tileDiv
+                    });
+                    
+                    tileCounter++;
+                }
+            }
+        }
+        
+        // Setup drag and drop for resize cards
+        Object.entries(resizers).forEach(([size, elements]) => {
+            // File input handler
+            elements.input.addEventListener('change', (e) => {
+                if (e.target.files.length > 0) {
+                    handleResizeFromFile(e.target.files[0], parseInt(size), elements);
+                }
+            });
+            
+            // Download handler
+            elements.download.addEventListener('click', () => {
+                if (elements.canvas) {
+                    const link = document.createElement('a');
+                    const filename = size === '240' ? 'main.png' : 'tab.png';
+                    link.download = filename;
+                    link.href = elements.canvas.toDataURL('image/png');
+                    link.click();
+                }
+            });
+            
+            // Drag and drop handlers
+            elements.card.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                elements.card.classList.add('drag-over');
+            });
+            
+            elements.card.addEventListener('dragleave', () => {
+                elements.card.classList.remove('drag-over');
+            });
+            
+            elements.card.addEventListener('drop', (e) => {
+                e.preventDefault();
+                elements.card.classList.remove('drag-over');
+                
+                // Check if it's a tile being dragged
+                const draggingElement = document.querySelector('.tile.dragging');
+                
+                if (draggingElement) {
+                    // Get all tiles in current DOM order
+                    const allTiles = Array.from(tilesContainer.querySelectorAll('.tile'));
+                    const domIndex = allTiles.indexOf(draggingElement);
+                    
+                    console.log(`拖曳圖片到 ${size}x${size} 區域, DOM index: ${domIndex}`);
+                    
+                    if (domIndex !== -1 && tiles[domIndex] && tiles[domIndex].canvas) {
+                        handleResizeFromCanvas(tiles[domIndex].canvas, parseInt(size), elements);
+                    }
+                } else {
+                    // Fallback: try the old method with text/plain data
+                    const tileData = e.dataTransfer.getData('text/plain');
+                    if (tileData) {
+                        const tileIndex = parseInt(tileData);
+                        if (!isNaN(tileIndex) && tiles[tileIndex] && tiles[tileIndex].canvas) {
+                            handleResizeFromCanvas(tiles[tileIndex].canvas, parseInt(size), elements);
+                        }
+                    }
+                }
+            });
+        });
+        
+        // Crop button listeners
+        applyCropBtn.addEventListener('click', applyCrop);
+        
+        resetCropBtn.addEventListener('click', () => {
+            if (uploadedImages.length > 0) {
+                const originalImg = uploadedImages[currentCropImageIndex].originalImg || uploadedImages[currentCropImageIndex].img;
+                initCropTool(originalImg);
+            }
+        });
+        
+        // Magic wand functionality
+        magicWandBtn.addEventListener('click', () => {
+            magicWandMode = !magicWandMode;
+            if (magicWandMode) {
+                magicWandBtn.textContent = '🪄 魔術棒已啟用（點擊預覽選色）';
+                magicWandBtn.style.background = '#a78bfa';
+                bgPreview.classList.add('wand-active');
+            } else {
+                magicWandBtn.textContent = '🪄 啟用魔術棒';
+                magicWandBtn.style.background = '#8b5cf6';
+                bgPreview.classList.remove('wand-active');
+                magicWandColor = null;
+            }
+        });
+        
+        // Magic wand click handler on preview
+        bgPreview.addEventListener('click', (e) => {
+            if (!magicWandMode || uploadedImages.length === 0) return;
+            
+            const img = e.target;
+            if (img.tagName !== 'IMG') return;
+            
+            const rect = img.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            // Get pixel color at click position
+            const canvas = document.createElement('canvas');
+            const currentImg = uploadedImages[currentBgPreviewIndex].img;
+            canvas.width = currentImg.width;
+            canvas.height = currentImg.height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(currentImg, 0, 0);
+            
+            const scaleX = currentImg.width / img.width;
+            const scaleY = currentImg.height / img.height;
+            const actualX = Math.floor(x * scaleX);
+            const actualY = Math.floor(y * scaleY);
+            
+            const imageData = ctx.getImageData(actualX, actualY, 1, 1);
+            magicWandColor = {
+                r: imageData.data[0],
+                g: imageData.data[1],
+                b: imageData.data[2]
+            };
+            
+            // Show feedback
+            magicWandBtn.textContent = `🪄 已選取顏色 RGB(${magicWandColor.r}, ${magicWandColor.g}, ${magicWandColor.b})`;
+            magicWandBtn.style.background = `rgb(${magicWandColor.r}, ${magicWandColor.g}, ${magicWandColor.b})`;
+            
+            // Disable magic wand mode after selection
+            magicWandMode = false;
+            bgPreview.classList.remove('wand-active');
+        });
+        
+        // Background removal toggle
+        bgRemoveToggle.addEventListener('change', (e) => {
+            bgRemovalEnabled = e.target.checked;
+            bgRemoveControls.style.display = e.target.checked ? 'block' : 'none';
+            if (e.target.checked) {
+                updatePreviewNavigation();
+            }
+        });
+        
+        // Tolerance slider
+        toleranceSlider.addEventListener('input', (e) => {
+            toleranceValue.textContent = e.target.value;
+        });
+        
+        // Preview navigation buttons
+        prevImageBtn.addEventListener('click', () => {
+            if (currentBgPreviewIndex > 0) {
+                currentBgPreviewIndex--;
+                updateBgPreviewImage();
+            }
+        });
+        
+        nextImageBtn.addEventListener('click', () => {
+            if (currentBgPreviewIndex < uploadedImages.length - 1) {
+                currentBgPreviewIndex++;
+                updateBgPreviewImage();
+            }
+        });
+        
+        // Apply background removal
+        applyBgRemoveBtn.addEventListener('click', () => {
+            if (uploadedImages.length === 0) return;
+            
+            const tolerance = parseInt(toleranceSlider.value);
+            bgPreview.innerHTML = '<div style="padding: 2rem; color: var(--text-muted);">處理中...</div>';
+            
+            // Process all images
+            setTimeout(() => {
+                processedImages = uploadedImages.map(imageData => {
+                    const canvas = removeBackground(imageData.img, tolerance, magicWandColor);
+                    return canvas;
+                });
+                
+                // Show preview of current image
+                updateBgPreviewImage();
+                
+                // Update grid preview to use processed image
+                updateGridPreview();
+                
+                // Reset magic wand after applying
+                if (magicWandColor) {
+                    magicWandBtn.textContent = '🪄 啟用魔術棒';
+                    magicWandBtn.style.background = '#8b5cf6';
+                }
+            }, 100);
+        });
+        
+        // Upload zone interactions
+        uploadZone.addEventListener('click', () => fileInput.click());
+        
+        uploadZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadZone.classList.add('dragover');
+        });
+        
+        uploadZone.addEventListener('dragleave', () => {
+            uploadZone.classList.remove('dragover');
+        });
+        
+        uploadZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadZone.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFiles(files);
+            }
+        });
+        
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFiles(e.target.files);
+            }
+        });
+        
+        // Grid preset buttons
+        gridBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                gridBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                const grid = btn.dataset.grid;
+                rowsInput.value = grid;
+                colsInput.value = grid;
+                updateGridPreview();
+            });
+        });
+        
+        // Custom grid inputs
+        rowsInput.addEventListener('input', () => {
+            gridBtns.forEach(b => b.classList.remove('active'));
+            updateGridPreview();
+        });
+        
+        colsInput.addEventListener('input', () => {
+            gridBtns.forEach(b => b.classList.remove('active'));
+            updateGridPreview();
+        });
+        
+        // Split image
+        splitBtn.addEventListener('click', () => {
+            if (uploadedImages.length === 0) return;
+            
+            const rows = parseInt(rowsInput.value);
+            const cols = parseInt(colsInput.value);
+            
+            if (rows < 1 || cols < 1 || rows > 20 || cols > 20) {
+                alert('請輸入 1-20 之間的數字！');
+                return;
+            }
+            
+            // Clear existing tiles
+            tiles = [];
+            tileCounter = 1;
+            tilesContainer.innerHTML = '';
+            
+            console.log('開始分割，圖片數量:', uploadedImages.length);
+            
+            // Split all uploaded images (use processed if available)
+            uploadedImages.forEach((imageData, index) => {
+                console.log(`分割圖片 ${index + 1}: 尺寸 ${imageData.img.width}×${imageData.img.height}`);
+                
+                let imgToSplit;
+                
+                if (bgRemovalEnabled && processedImages[index]) {
+                    // Use processed (background-removed) version
+                    console.log(`使用去背版本 ${index + 1}`);
+                    const tempImg = new Image();
+                    tempImg.src = processedImages[index].toDataURL('image/png');
+                    imgToSplit = processedImages[index];
+                    splitImageFromCanvas(imgToSplit, rows, cols);
+                } else {
+                    // Use current image (could be cropped)
+                    console.log(`使用當前版本 ${index + 1}`);
+                    splitImage(imageData.img, rows, cols);
+                }
+            });
+            
+            downloadAllBtn.disabled = false;
+            renumberBtn.disabled = false;
+        });
+        
+        function splitImageFromCanvas(canvas, rows, cols) {
+            // Create temporary image from canvas
+            const img = new Image();
+            img.onload = () => {
+                splitImage(img, rows, cols);
+            };
+            img.src = canvas.toDataURL('image/png');
+        }
+        
+        // Renumber tiles
+        renumberBtn.addEventListener('click', () => {
+            // Get all tiles in current DOM order (after drag-and-drop)
+            const tilesInOrder = Array.from(tilesContainer.querySelectorAll('.tile'));
+            let newCounter = 1;
+            
+            console.log('開始重新編號,總共', tilesInOrder.length, '張圖片');
+            
+            tilesInOrder.forEach((tileElement, domIndex) => {
+                // Find corresponding tile data by matching the element or its content
+                let tile = null;
+                
+                // Method 1: Try to find by element reference
+                tile = tiles.find(t => t && t.element === tileElement);
+                
+                // Method 2: If not found, rebuild tiles array based on DOM order
+                if (!tile) {
+                    // Find by checking canvas data URL or other unique properties
+                    const img = tileElement.querySelector('img');
+                    if (img) {
+                        tile = tiles.find(t => {
+                            if (!t || !t.canvas) return false;
+                            try {
+                                return t.canvas.toDataURL('image/png') === img.src;
+                            } catch (e) {
+                                return false;
+                            }
+                        });
+                    }
+                }
+                
+                // Get checkbox from the actual DOM element
+                const checkbox = tileElement.querySelector('.tile-checkbox');
+                
+                if (tile && checkbox && checkbox.checked) {
+                    console.log(`編號圖片 ${domIndex}: ${newCounter}`);
+                    
+                    // Update the overlay number
+                    const overlay = tileElement.querySelector('.tile-overlay');
+                    if (overlay) {
+                        overlay.textContent = String(newCounter).padStart(2, '0');
+                    }
+                    
+                    // Update the tile name
+                    tile.name = `${String(newCounter).padStart(2, '0')}.png`;
+                    
+                    // Update checkbox reference in tile object
+                    tile.checkbox = checkbox;
+                    tile.element = tileElement;
+                    
+                    // Update download button
+                    const downloadBtn = tileElement.querySelector('.tile-action-btn:not(.delete)');
+                    if (downloadBtn) {
+                        const currentNumber = newCounter;
+                        const currentCanvas = tile.canvas;
+                        downloadBtn.onclick = (e) => {
+                            e.stopPropagation();
+                            const link = document.createElement('a');
+                            link.download = `${String(currentNumber).padStart(2, '0')}.png`;
+                            link.href = currentCanvas.toDataURL('image/png');
+                            link.click();
+                        };
+                    }
+                    
+                    newCounter++;
+                }
+            });
+            
+            if (newCounter > 1) {
+                alert(`已重新編號！選中的圖片已按照目前順序編號為 01-${String(newCounter - 1).padStart(2, '0')}`);
+            } else {
+                alert('請至少選擇一張圖片！');
+            }
+        });
+        
+        // Download all selected tiles as ZIP
+        downloadAllBtn.addEventListener('click', async () => {
+            const zip = new JSZip();
+            const selectedTiles = tiles.filter(tile => tile && tile.checkbox.checked);
+            
+            if (selectedTiles.length === 0 && !resizers[240].canvas && !resizers[96].canvas) {
+                alert('請至少選擇一張圖片！');
+                return;
+            }
+            
+            // Add split tiles
+            selectedTiles.forEach(tile => {
+                const dataUrl = tile.canvas.toDataURL('image/png');
+                const base64Data = dataUrl.split(',')[1];
+                zip.file(tile.name, base64Data, { base64: true });
+            });
+            
+            // Add 240x240 image if exists
+            if (resizers[240].canvas) {
+                const dataUrl = resizers[240].canvas.toDataURL('image/png');
+                const base64Data = dataUrl.split(',')[1];
+                zip.file('main.png', base64Data, { base64: true });
+            }
+            
+            // Add 96x74 image if exists
+            if (resizers[96].canvas) {
+                const dataUrl = resizers[96].canvas.toDataURL('image/png');
+                const base64Data = dataUrl.split(',')[1];
+                zip.file('tab.png', base64Data, { base64: true });
+            }
+            
+            const blob = await zip.generateAsync({ type: 'blob' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `images_${selectedTiles.length}tiles.zip`;
+            a.click();
+            URL.revokeObjectURL(url);
+        });
+    </script>
+</body>
+</html>
